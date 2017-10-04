@@ -1,0 +1,1 @@
+gcc definition.cpp main.cpp inputJsonGenerator.cpp -Wall -ljsoncpp -lstdc++ -o main
