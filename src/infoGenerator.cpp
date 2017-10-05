@@ -112,6 +112,11 @@ int generateTagHandle(int randomBase) {
 	return rand()%10;
 }
 
+int generateLimitation(int randomBase) {
+	srand((unsigned)(time(NULL)+randomBase));
+	return 10+rand()%6;
+}
+
 /*
  *  Function Name: generateStudentInfo
  *  generate student information
@@ -187,5 +192,68 @@ void infoGenerator::generateStudentInfo() {
  *  generate department information
  */
 void infoGenerator::generateDepartmentInfo() {
+		for (int i = 0; i < 20; i++) {
+		// set srand
+		srand((unsigned)(time(NULL)+i));
 
+		// generate student_no
+		string index = "";
+		string index_suffix = "";
+		stringstream ss;
+		ss << i+1;
+		ss >> index_suffix;
+
+		if (index_suffix.length() == 1) {
+			index = index+"00"+index_suffix;
+		} else if (index_suffix.length() == 2) {
+			index = index+"0"+index_suffix;
+		} else {
+			index = index_suffix;
+		}
+		
+		department[i].department_number = "D"+index;
+
+		// random number of event_schedules
+		// 140 = 10*2/day*7days
+		department[i].event_schedules_number = rand()%140; 
+
+		// generate "event_schedules_number" event schedule strings
+		for (int j = 0; j < department[i].event_schedules_number; j++) {
+			// acquire free time string components
+			int weekday, startTime, endTime;
+			weekday = generateWeekday();
+			startTime = generateStartTime();
+			endTime = generateEndTime(startTime);
+
+			department[i].event_schedules[j] = generateTimeString(weekday, startTime, endTime);
+		}
+
+		// random number of tags
+		department[i].tag_number = rand()%10;
+
+		// searchKey[handle] == 1: the key has been used
+		int searchKey[10];
+		// current tag number
+		int currentTagNumber = 0, base = 0;
+
+		for (currentTagNumber = 0; currentTagNumber < department[i].tag_number; currentTagNumber++) {
+			int handle = generateTagHandle(base);
+			// if the tag has been added
+			if (searchKey[handle] == 1) {
+				// find the nearest one
+				while (searchKey[handle] == 1) {
+					handle++;
+					if (handle > 10) {
+						handle = 0;
+					}
+				}
+			}
+			// add the tag
+			department[i].tags[currentTagNumber] = interest_tags[handle]; 
+			searchKey[handle] = 1;
+		}
+
+		// random limitation
+		department[i].member_limit = generateLimitation(i);
+	}
 }
