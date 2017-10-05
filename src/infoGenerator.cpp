@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <iostream>
+#include <cstring>
 #include <sstream>
 #include <time.h>
 #include "definition.h"
@@ -81,8 +82,8 @@ string generateTimeString(int weekday, int startTime, int EndTime) {
 	outputString += "~";
 
 	// EndTime
-	int endTimeHour = endTime/60;
-	int endTimeMinute = endTime%60;
+	int endTimeHour = EndTime/60;
+	int endTimeMinute = EndTime%60;
 	string endTimeHour_str = "", endTimeMinute_str = "";
 	string endTimeHour_str_suffix = "", endTimeMinute_str_suffix = "";
 
@@ -163,6 +164,7 @@ void infoGenerator::generateStudentInfo() {
 
 		// searchKey[handle] == 1: the key has been used
 		int searchKey[10];
+		memset(searchKey, 0, sizeof(searchKey));
 		// current tag number
 		int currentTagNumber = 0, base = 0;
 
@@ -173,13 +175,12 @@ void infoGenerator::generateStudentInfo() {
 				// find the nearest one
 				while (searchKey[handle] == 1) {
 					handle++;
-					if (handle > 10) {
-						handle = 0;
-					}
+					handle = handle%10;
+					if (searchKey[handle] == 0) break;
 				}
 			}
 			// add the tag
-			student[i].tags[currentTagNumber] = interest_tags[handle]; 
+			student[i].tags[currentTagNumber] = interest_tags[handle];
 			searchKey[handle] = 1;
 		}
 
@@ -233,6 +234,7 @@ void infoGenerator::generateDepartmentInfo() {
 
 		// searchKey[handle] == 1: the key has been used
 		int searchKey[10];
+		memset(searchKey, 0, sizeof(searchKey));
 		// current tag number
 		int currentTagNumber = 0, base = 0;
 
@@ -243,9 +245,8 @@ void infoGenerator::generateDepartmentInfo() {
 				// find the nearest one
 				while (searchKey[handle] == 1) {
 					handle++;
-					if (handle > 10) {
-						handle = 0;
-					}
+					handle = handle%10;
+					if (searchKey[handle] == 0) break;
 				}
 			}
 			// add the tag
