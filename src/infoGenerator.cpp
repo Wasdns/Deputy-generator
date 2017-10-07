@@ -10,27 +10,44 @@ using namespace std;
 extern students student[310];
 extern departments department[25];
 
+int seedBase = 0;
+
 /* interest tags */
 string interest_tags[20] = {"study", "film", "English", "music", "reading", "chess", "football", "dance", "programming", "basketball"};
 
 int generateWeekday() {
-	srand((unsigned)(time(NULL)));
+	srand((unsigned)(time(NULL))+seedBase);
+	seedBase++;
 	return rand()%7;
 }
 
 int generateStartTime() {
-	srand((unsigned)(time(NULL)));
-	return rand()%1440;
+	srand((unsigned)(time(NULL))+seedBase);
+	seedBase++;
+	
+	int rawTime = rand()%1440;
+	if (rawTime <= 480) { 
+		rawTime += 480;
+	} else if (rawTime >= 1260) { 
+		rawTime = 1260-(rawTime-1260);
+	}
+
+	return rawTime;
 }
 
 int generateEndTime(int base) {
-	srand((unsigned)(time(NULL)));
+	srand((unsigned)(time(NULL))+seedBase);
+	seedBase++;
 
 	int idx = rand()%1440;
 	if (base+idx >= 1440) {
 		idx = base+idx-1440;
 	}
 	
+	// 30min <= idx <= 180min 
+	idx %= 150;
+	idx += 30;
+
 	return base+idx;
 }
 
@@ -109,12 +126,14 @@ string generateTimeString(int weekday, int startTime, int EndTime) {
 }
 
 int generateTagHandle(int randomBase) {
-	srand((unsigned)(time(NULL))+randomBase);
+	srand((unsigned)(time(NULL))+randomBase+seedBase);
+	seedBase++;
 	return rand()%10;
 }
 
 int generateLimitation(int randomBase) {
-	srand((unsigned)(time(NULL)+randomBase));
+	srand((unsigned)(time(NULL)+randomBase)+seedBase);
+	seedBase++;
 	return 10+rand()%6;
 }
 
@@ -125,7 +144,7 @@ int generateLimitation(int randomBase) {
 void infoGenerator::generateStudentInfo() {
 	for (int i = 0; i < 300; i++) {
 		// set srand
-		srand((unsigned)(time(NULL)+i));
+		srand((unsigned)(time(NULL)+i+seedBase));
 
 		// generate student_no
 		string index = "";
@@ -148,19 +167,89 @@ void infoGenerator::generateStudentInfo() {
 		// 140 = 10*2/day*7days
 		student[i].free_time_number = rand()%140; 
 
+		// Considering the real world situation, we determind to 
+		// reduce the free_time_number based on the interview
+		// of some students.
+		// 
+		// The number of universal schedules is about 2-8.
+		// And the schedules often be holded on weekends.
+
+		student[i].free_time_number = student[i].free_time_number%7+2;
+
+		// Avoid free time collision in a day
+		// Each day has no more than 2 schedule timezones.
+
+		// timeZones[i][0]: the startTime of weekday i;
+		// timeZones[i][1]: the endTime of weekday i.
+		int timeZones[10][5];
+		memset(timeZones, 0, sizeof(timeZones));
+
+		// isWeekdayUsed[weekday] = true: the weekday has been used
+		bool isWeekdayUsed[10];
+		for (int j = 0; j < 7; j++) {
+			isWeekdayUsed[j] = false;
+		}
+
+		// disable more than 2 schedule timezones in a day
+		bool isWeekdayDisabled[10];
+		for (int j = 0; j < 7; j++) {
+			isWeekdayDisabled[j] = false;
+		}
+
 		// generate "free_time_number" free time strings
 		for (int j = 0; j < student[i].free_time_number; j++) {
 			// acquire free time string components
 			int weekday, startTime, endTime;
-			weekday = generateWeekday();
-			startTime = generateStartTime();
-			endTime = generateEndTime(startTime);
+			weekday = generateWeekday(); 
+
+			// if the weekday already has two time zones, search for the next day
+			if (isWeekdayDisabled[weekday]) {
+				while (isWeekdayDisabled[weekday]) {
+					weekday = (weekday+1)%7;
+				}
+			}
+
+			// the day has been scheduled once
+			if (isWeekdayUsed[weekday]) {
+				int lastTimeStart = timeZones[weekday][0];
+				int lastTimeEnd = timeZones[weekday][1];
+
+				// if lastTimeStart-480(8:00) > 180(3h), set it as upperBond
+				// to generate free time zone
+				if (lastTimeStart-480 > 180) {
+					// 480 <= startTime <= lastTimeStart-180
+					// startTime = rand()%(n-m+1)+m, n=lastTimeStart-180, m=480
+					startTime = rand()%(lastTimeStart-180-480+1)+480;
+					endTime = generateEndTime(startTime);
+				} else { // otherwise, choose another part of the day
+					// lastTimeEnd <= startTime <= 1260
+					// startTime = rand()%(n-m+1)+m, n=1260, m=lastTimeEnd
+					startTime = rand()%(1260-lastTimeEnd+1)+lastTimeEnd;
+					endTime = generateEndTime(startTime);
+				}
+
+				// mark the day as "disabled"
+				isWeekdayDisabled[weekday] = true;
+
+			} else { // the day has not been scheduled
+				startTime = generateStartTime();
+				endTime = generateEndTime(startTime);
+
+				// mark the day as been scheduled
+				isWeekdayUsed[weekday] = true;
+				
+				// record this time schedule in timeZones
+				timeZones[weekday][0] = startTime;
+				timeZones[weekday][1] = endTime;
+			}
 
 			student[i].free_time[j] = generateTimeString(weekday, startTime, endTime);
 		}
 
+		// We are not trying to limit the number of student interests.
+
 		// random number of tags
-		student[i].tag_number = rand()%10;
+		student[i].tag_number = rand()%9+2;
 
 		// searchKey[handle] == 1: the key has been used
 		int searchKey[10];
@@ -185,6 +274,8 @@ void infoGenerator::generateStudentInfo() {
 		}
 
 		// TODO: applications_department
+
+		seedBase++;
 	}
 }
 
@@ -195,7 +286,7 @@ void infoGenerator::generateStudentInfo() {
 void infoGenerator::generateDepartmentInfo() {
 		for (int i = 0; i < 20; i++) {
 		// set srand
-		srand((unsigned)(time(NULL)+i));
+		srand((unsigned)(time(NULL)+i+seedBase));
 
 		// generate student_no
 		string index = "";
@@ -218,19 +309,89 @@ void infoGenerator::generateDepartmentInfo() {
 		// 140 = 10*2/day*7days
 		department[i].event_schedules_number = rand()%140; 
 
+		// Considering the real world situation, we determind to 
+		// reduce the event_schedules_number based on the interview
+		// of a manager of one department.
+		// 
+		// The number of universal schedules is about 2-5.
+		// And the schedules often be holded on weekends/Wed.
+
+		department[i].event_schedules_number = department[i].event_schedules_number%4+2;
+
+		// Avoid free time collision in a day
+		// Each day has no more than 2 schedule timezones.
+
+		// timeZones[i][0]: the startTime of weekday i;
+		// timeZones[i][1]: the endTime of weekday i.
+		int timeZones[10][5];
+		memset(timeZones, 0, sizeof(timeZones));
+
+		// isWeekdayUsed[weekday] = true: the weekday has been used
+		bool isWeekdayUsed[10];
+		for (int j = 0; j < 7; j++) {
+			isWeekdayUsed[j] = false;
+		}
+
+		// disable more than 2 schedule timezones in a day
+		bool isWeekdayDisabled[10];
+		for (int j = 0; j < 7; j++) {
+			isWeekdayDisabled[j] = false;
+		}
+
 		// generate "event_schedules_number" event schedule strings
 		for (int j = 0; j < department[i].event_schedules_number; j++) {
 			// acquire free time string components
 			int weekday, startTime, endTime;
-			weekday = generateWeekday();
-			startTime = generateStartTime();
-			endTime = generateEndTime(startTime);
+			weekday = generateWeekday(); 
+
+			// if the weekday already has two time zones, search for the next day
+			if (isWeekdayDisabled[weekday]) {
+				while (isWeekdayDisabled[weekday]) {
+					weekday = (weekday+1)%7;
+				}
+			}
+
+			// the day has been scheduled once
+			if (isWeekdayUsed[weekday]) {
+				int lastTimeStart = timeZones[weekday][0];
+				int lastTimeEnd = timeZones[weekday][1];
+
+				// if lastTimeStart-480(8:00) > 180(3h), set it as upperBond
+				// to generate free time zone
+				if (lastTimeStart-480 > 180) {
+					// 480 <= startTime <= lastTimeStart-180
+					// startTime = rand()%(n-m+1)+m, n=lastTimeStart-180, m=480
+					startTime = rand()%(lastTimeStart-180-480+1)+480;
+					endTime = generateEndTime(startTime);
+				} else { // otherwise, choose another part of the day
+					// lastTimeEnd <= startTime <= 1260
+					// startTime = rand()%(n-m+1)+m, n=1260, m=lastTimeEnd
+					startTime = rand()%(1260-lastTimeEnd+1)+lastTimeEnd;
+					endTime = generateEndTime(startTime);
+				}
+
+				// mark the day as "disabled"
+				isWeekdayDisabled[weekday] = true;
+				
+			} else { // the day has not been scheduled
+				startTime = generateStartTime();
+				endTime = generateEndTime(startTime);
+
+				// mark the day as been scheduled
+				isWeekdayUsed[weekday] = true;
+				
+				// record this time schedule in timeZones
+				timeZones[weekday][0] = startTime;
+				timeZones[weekday][1] = endTime;
+			}
 
 			department[i].event_schedules[j] = generateTimeString(weekday, startTime, endTime);
 		}
 
+		// The number limitation of department tags
+
 		// random number of tags
-		department[i].tag_number = rand()%10;
+		department[i].tag_number = rand()%4+2;
 
 		// searchKey[handle] == 1: the key has been used
 		int searchKey[10];
@@ -256,5 +417,7 @@ void infoGenerator::generateDepartmentInfo() {
 
 		// random limitation
 		department[i].member_limit = generateLimitation(i);
+
+		seedBase++;
 	}
 }
