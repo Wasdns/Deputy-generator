@@ -14,7 +14,7 @@ int main() {
 	infoGenerator_instance.generateStudentInfo();
 
 	inputJsonGenerator generator_instance;
-	generator_instance.generateJson("test/test1.json");
+	generator_instance.generateJson("input_data.txt");
 	
 	return 0;
 }
