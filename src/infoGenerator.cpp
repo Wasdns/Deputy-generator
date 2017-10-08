@@ -15,13 +15,13 @@ int seedBase = 0;
 /* interest tags */
 string interest_tags[20] = {"study", "film", "English", "music", "reading", "chess", "football", "dance", "programming", "basketball"};
 
-int generateWeekday() {
+static int generateWeekday() {
 	srand((unsigned)(time(NULL))+seedBase);
 	seedBase++;
 	return rand()%7;
 }
 
-int generateStartTime() {
+static int generateStartTime() {
 	srand((unsigned)(time(NULL))+seedBase);
 	seedBase++;
 	
@@ -35,7 +35,7 @@ int generateStartTime() {
 	return rawTime;
 }
 
-int generateEndTime(int base) {
+static int generateEndTime(int base) {
 	srand((unsigned)(time(NULL))+seedBase);
 	seedBase++;
 
@@ -51,7 +51,7 @@ int generateEndTime(int base) {
 	return base+idx;
 }
 
-string generateTimeString(int weekday, int startTime, int EndTime) {
+static string generateTimeString(int weekday, int startTime, int EndTime) {
 	string outputString = "";
 
 	// weekday
@@ -125,13 +125,13 @@ string generateTimeString(int weekday, int startTime, int EndTime) {
 	return outputString;
 }
 
-int generateTagHandle(int randomBase) {
+static int generateTagHandle(int randomBase) {
 	srand((unsigned)(time(NULL))+randomBase+seedBase);
 	seedBase++;
 	return rand()%10;
 }
 
-int generateLimitation(int randomBase) {
+static int generateLimitation(int randomBase) {
 	srand((unsigned)(time(NULL)+randomBase)+seedBase);
 	seedBase++;
 	return 10+rand()%6;
@@ -142,6 +142,7 @@ int generateLimitation(int randomBase) {
  *  generate student information
  */
 void infoGenerator::generateStudentInfo() {
+	// generate basic student information
 	for (int i = 0; i < 300; i++) {
 		// set srand
 		srand((unsigned)(time(NULL)+i+seedBase));
@@ -273,10 +274,62 @@ void infoGenerator::generateStudentInfo() {
 			searchKey[handle] = 1;
 		}
 
-		// TODO: applications_department
+		// for current student, randomly generate his applications_department_number: 1-5
+		student[i].applications_department_number = random()%5+1;
 
 		seedBase++;
 	}
+
+	// generate applications_departments for each student
+
+	// the number of popular departments: 2-4
+	// for each of popular departments: ~100(80-120) people 
+	int popularDepartmentNumber = 0;
+	popularDepartmentNumber = random()%3+2;
+	// baseValue for calculating desired departments
+	int baseValue = 10*popularDepartmentNumber+4*(20-popularDepartmentNumber);
+
+	// for each of the students, generate his desired departments
+	for (int i = 0; i < 300; i++) { 
+		// avoid the same department demands of one student, eg. 1st dep1, 2nd dep1...
+		// applications_department_handler[i] = 1: the department i has been choosed.
+		int applications_department_handler[20];
+		memset(applications_department_handler, 0, sizeof(applications_department_handler));
+
+		// current student have chosen N(currentChooseDepNumber) departments 
+		int currentChooseDepNumber = student[i].applications_department_number;
+
+		// based on the randomly rate, choose the desired department
+		for (int j = 0; j < currentChooseDepNumber; j++) {
+			srand((unsigned)(time(NULL)+i+seedBase));
+			seedBase++;
+			
+			int randomNumber = random()%baseValue;
+			int currentDepHandle = 0;
+
+			// if the randomNumber is in the range (0, popularDepartmentNumber*10),
+			// that means the student lucky choose popular department
+			if (randomNumber < popularDepartmentNumber*10) {
+				currentDepHandle = randomNumber/10;
+			} else { // otherwise, choose the colder department
+				currentDepHandle = (randomNumber-popularDepartmentNumber*10)/4+popularDepartmentNumber+1;
+			}
+
+			// if the current department handle has been chosen by this student
+			// search for the nearest department.
+			if (applications_department_handler[currentDepHandle] == 1) {
+				while (applications_department_handler[currentDepHandle] == 1) {
+					currentDepHandle = (currentDepHandle+1)%20;
+				}
+			} 
+			
+			// choose the department
+			student[i].applications_department[j] = department[currentDepHandle].department_number;
+			// mark current department has been chosen by this student
+			applications_department_handler[currentDepHandle] = 1;
+		}
+	}
+
 }
 
 /*

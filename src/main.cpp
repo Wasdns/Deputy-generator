@@ -10,8 +10,8 @@ extern departments department[25];
 
 int main() {
 	infoGenerator infoGenerator_instance;
-	infoGenerator_instance.generateStudentInfo();
 	infoGenerator_instance.generateDepartmentInfo();
+	infoGenerator_instance.generateStudentInfo();
 
 	inputJsonGenerator generator_instance;
 	generator_instance.generateJson("test/test1.json");
